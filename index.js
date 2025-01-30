@@ -870,7 +870,7 @@ function cardCannotEscapeCheck(type, col) {
         for (var i = 6; i < 8; i++) {
             for (var j = 0; j < 8; j++) {
                 if (pieceArray[i][j] == null) {
-                    pieceArray[i][j] = new Piece(j, i, type, col);
+                    pieceArray[i][j] = new Piece(new Vector2(j, i), type, PIECECOLOR.WHITE);
                     if (!checkCheck(true)) {
                         pieceArray[i][j] = null;
                         return false;
@@ -880,12 +880,11 @@ function cardCannotEscapeCheck(type, col) {
             }
         }
         return true;
-    }
-    if (col == PIECECOLOR.BLACK) {
+    } else if (col == PIECECOLOR.BLACK) {
         for (var i = 0; i < 2; i++) {
             for (var j = 0; j < 8; j++) {
                 if (pieceArray[i][j] == null) {
-                    pieceArray[i][j] = new Piece(j, i, type, col);
+                    pieceArray[i][j] = new Piece(new Vector2(j, i), type, PIECECOLOR.BLACK);
                     if (!checkCheck(true)) {
                         pieceArray[i][j] = null;
                         return false;
@@ -903,7 +902,7 @@ function renderDeck() {
         for (var i = 0; i < whiteCardList.length; i++) {
             // raise on hover
             if (i == whiteCardList.length - 1) {
-                if (!cardCannotEscapeCheck(whiteCardList[i].type, turn) && !showProceedButton && !switchingTurn && !promoteMode && !drawingCard && !placingCard && hasDrawn && (mouseX / scale) > (whiteCardList[i].unscaledPos.x - 50) && (mouseX / scale) < (whiteCardList[i].unscaledPos.x + 50) && (mouseY / scale) > 400) {
+                if (!cardCannotEscapeCheck(whiteCardList[i].type, PIECECOLOR.WHITE) && !showProceedButton && !switchingTurn && !promoteMode && !drawingCard && !placingCard && hasDrawn && (mouseX / scale) > (whiteCardList[i].unscaledPos.x - 50) && (mouseX / scale) < (whiteCardList[i].unscaledPos.x + 50) && (mouseY / scale) > 400) {
                     if (mouseDown) {
                         placingCard = true;
                         highlightedPieceList = [];
@@ -917,7 +916,7 @@ function renderDeck() {
                     whiteCardList[i].unscaledPos.y += ((480 - whiteCardList[i].unscaledPos.y) / 15) * deltaTime;
                 }
             } else {
-                if (!cardCannotEscapeCheck(whiteCardList[i].type, turn) && !showProceedButton && !switchingTurn && !promoteMode && !drawingCard && !placingCard && hasDrawn && (mouseX / scale) > (whiteCardList[i].unscaledPos.x - 50) && (mouseX / scale) < (whiteCardList[i + 1].unscaledPos.x - 50) && (mouseY / scale) > 400) {
+                if (!cardCannotEscapeCheck(whiteCardList[i].type, PIECECOLOR.WHITE) && !showProceedButton && !switchingTurn && !promoteMode && !drawingCard && !placingCard && hasDrawn && (mouseX / scale) > (whiteCardList[i].unscaledPos.x - 50) && (mouseX / scale) < (whiteCardList[i + 1].unscaledPos.x - 50) && (mouseY / scale) > 400) {
                     if (mouseDown) {
                         placingCard = true;
                         highlightedPieceList = [];
@@ -943,7 +942,7 @@ function renderDeck() {
         for (var i = 0; i < blackCardList.length; i++) {
             // raise on hover
             if (i == blackCardList.length - 1) {
-                if (!cardCannotEscapeCheck(blackCardList[i].type, turn) && !showProceedButton && !switchingTurn && !promoteMode && !drawingCard && !placingCard && hasDrawn && (mouseX / scale) > (blackCardList[i].unscaledPos.x - 50) && (mouseX / scale) < (blackCardList[i].unscaledPos.x + 50) && (mouseY / scale) > 400) {
+                if (!cardCannotEscapeCheck(blackCardList[i].type, PIECECOLOR.BLACK) && !showProceedButton && !switchingTurn && !promoteMode && !drawingCard && !placingCard && hasDrawn && (mouseX / scale) > (blackCardList[i].unscaledPos.x - 50) && (mouseX / scale) < (blackCardList[i].unscaledPos.x + 50) && (mouseY / scale) > 400) {
                     if (mouseDown) {
                         placingCard = true;
                         highlightedPieceList = [];
@@ -957,7 +956,7 @@ function renderDeck() {
                     blackCardList[i].unscaledPos.y += ((480 - blackCardList[i].unscaledPos.y) / 15) * deltaTime;
                 }
             } else {
-                if (!cardCannotEscapeCheck(blackCardList[i].type, turn) && !showProceedButton && !switchingTurn && !promoteMode && !drawingCard && !placingCard && hasDrawn && (mouseX / scale) > (blackCardList[i].unscaledPos.x - 50) && (mouseX / scale) < (blackCardList[i + 1].unscaledPos.x - 50) && (mouseY / scale) > 400) {
+                if (!cardCannotEscapeCheck(blackCardList[i].type, PIECECOLOR.BLACK) && !showProceedButton && !switchingTurn && !promoteMode && !drawingCard && !placingCard && hasDrawn && (mouseX / scale) > (blackCardList[i].unscaledPos.x - 50) && (mouseX / scale) < (blackCardList[i + 1].unscaledPos.x - 50) && (mouseY / scale) > 400) {
                     if (mouseDown) {
                         placingCard = true;
                         highlightedPieceList = [];
