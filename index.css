@@ -1,0 +1,12 @@
+body {
+    background-color: #aa88ffff;
+    color: #220044ff;
+    font-family: 'Comic Sans MS', 'Courier New', Courier, monospace;
+    text-align: center;
+}
+
+canvas {
+    border: #4b00bdff solid;
+    border-radius: 2em;
+    border-width: 0.5em;
+}
