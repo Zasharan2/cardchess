@@ -572,6 +572,11 @@ function renderPieces() {
 }
 
 function renderHighlightedPieces() {
+    // deselect
+    if (keys["Escape"]) {
+        selectedPiece = null;
+        highlightedPieceList = [];
+    }
     for (var i = 0; i < highlightedPieceList.length; i++) {
         ctx.beginPath();
         ctx.fillStyle = "#00ff0080";
@@ -861,6 +866,20 @@ function renderPlaceCard() {
                     pieceArray[mouseBoardY][mouseBoardX] = null;
                 }
             }
+        }
+
+        // deselect
+        if (keys["Escape"] && !showProceedButton) {
+            placeCard.unscaledPos.x = 999;
+            placeCard.unscaledPos.y = 480;
+            placeCard.size = 1;
+            if (placeCard.col == PIECECOLOR.WHITE) { whiteCardList.push(placeCard); }
+            else if (placeCard.col == PIECECOLOR.BLACK) { blackCardList.push(placeCard); }
+            placePiece = null;
+            placeCard = null;
+            placingCard = false;
+            highlightedPieceList = [];
+            selectedPiece = null;
         }
     }
 }
