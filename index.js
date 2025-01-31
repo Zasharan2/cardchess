@@ -28,8 +28,8 @@ c.addEventListener('contextmenu', function(event) {
 window.addEventListener("mousemove", function(event) {
     mouseX = (event.clientX - c.getBoundingClientRect().left) * scale;
     mouseY = (event.clientY - c.getBoundingClientRect().top) * scale;
-    mouseBoardX = Math.floor(((mouseX / scale) - 19) / 40);
-    mouseBoardY = Math.floor(((mouseY / scale) - 19) / 40);
+    mouseBoardX = Math.floor(((mouseX / scale) - 28) / 40);
+    mouseBoardY = Math.floor(((mouseY / scale) - 28) / 40);
 });
 
 var mouseDown, mouseButton;
@@ -62,7 +62,6 @@ function renderBoard() {
     ctx.fillStyle = "#7755ccff";
     ctx.fillRect(11 * scale, 11 * scale, 336 * scale, 336 * scale);
     ctx.fillStyle = "#ccaaffff";
-    // ctx.fillStyle = "#220044ff";
     ctx.fillRect(19 * scale, 19 * scale, 320 * scale, 320 * scale);
     for (var i = 0; i < 8; i++) {
         for (var j = 0; j < 8; j++) {
@@ -104,7 +103,6 @@ function switchTurn() {
         switchTurnScreenX2 = 512;
     }
     transitionOut = false;
-    // switchTurnTimer = 0;
     switchTurnTimer = 0;
     switchingTurn = true;
 }
@@ -666,7 +664,7 @@ class Card {
             // border
             ctx.beginPath();
             ctx.strokeStyle = "#552288ff";
-            ctx.lineWidth = this.size * 8 * scale; // 8
+            ctx.lineWidth = this.size * 8 * scale;
             ctx.roundRect((this.pos.x - 50) * this.size * scale, (this.pos.y - 80) * this.size * scale, this.size * 100 * scale, this.size * 160 * scale, this.size * 10 * scale);
             ctx.stroke();
 
@@ -708,7 +706,7 @@ class Card {
             ctx.beginPath();
             ctx.fillStyle = "#7744aaff";
             ctx.strokeStyle = "#552288ff";
-            ctx.lineWidth = this.size * 8 * scale; // 8
+            ctx.lineWidth = this.size * 8 * scale;
             ctx.roundRect((this.pos.x - 50) * this.size * scale, (this.pos.y - 80) * this.size * scale, this.size * 100 * scale, this.size * 160 * scale, this.size * 10 * scale);
             ctx.fill();
             ctx.stroke();
@@ -757,7 +755,6 @@ var blackCardList = [];
 var blackKingDrawn = false;
 
 var switchingTurn = false;
-// var switchTurnTimer = 0;
 
 function randomCard() {
     var c = Math.random();
@@ -851,7 +848,6 @@ function renderPlaceCard() {
         if (placePiece == null) {
             placePiece = new Piece(new Vector2(mouseBoardX, mouseBoardY), placeCard.type, placeCard.col);
         }
-        // placingCard = false;
         placePiece.pos.x = mouseBoardX;
         placePiece.pos.y = mouseBoardY;
         if (mouseBoardX >= 0 && mouseBoardX <= 7 && ((turn == PIECECOLOR.BLACK && (mouseBoardY == 0 || mouseBoardY == 1)) || (turn == PIECECOLOR.WHITE && (mouseBoardY == 6 || mouseBoardY == 7)))) {
@@ -1023,10 +1019,6 @@ function renderDrawPileOverlay() {
         ctx.beginPath();
         ctx.fillStyle = "#00000080";
         ctx.fillRect(360 * scale, 70 * scale, 132 * scale, 214 * scale);
-        // ctx.fillRect(0, 354 * scale, 512 * scale, 158 * scale);
-        // ctx.fillRect(0, 0, 360 * scale, 354 * scale);
-        // ctx.fillRect(492 * scale, 0, 20 * scale, 384 * scale);
-        // ctx.fillRect(360 * scale, 0, 132 * scale, 10 * scale);
     }
 }
 
@@ -1056,11 +1048,7 @@ var switchTurnScreenX2 = -512;
 var switchTurnTimer = 0;
 var transitionOut = false;
 function renderSwitchTurn() {
-    switchTurnTimer += deltaTime;
-
     ctx.beginPath();
-    // ctx.fillStyle = "#552288ff";
-    // ctx.fillRect(switchTurnScreenX * scale, 0, 512 * scale, 512 * scale);
 
     ctx.fillStyle = "#552288ff";
     ctx.fillRect(switchTurnScreenX1 * scale, 0 * scale, 512 * scale, 64 * scale);
@@ -1209,7 +1197,7 @@ function renderAll() {
         renderPromoteSelect();
     }
     if (switchingTurn) {
-        // switchTurnTimer += deltaTime;
+        switchTurnTimer += deltaTime;
         renderSwitchTurn();
     }
 }
