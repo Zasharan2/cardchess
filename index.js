@@ -96,9 +96,16 @@ var hasDrawn = false;
 var showProceedButton = false;
 
 function switchTurn() {
-    switchTurnScreenX = -512;
+    if (turn == PIECECOLOR.WHITE) {
+        switchTurnScreenX1 = -512;
+        switchTurnScreenX2 = -512;
+    } else if (turn == PIECECOLOR.BLACK) {
+        switchTurnScreenX1 = 512;
+        switchTurnScreenX2 = 512;
+    }
     transitionOut = false;
     // switchTurnTimer = 0;
+    switchTurnTimer = 0;
     switchingTurn = true;
 }
 
@@ -1044,40 +1051,54 @@ function renderOpponentCardCount() {
     }
 }
 
-var switchTurnScreenX = -512;
+var switchTurnScreenX1 = -512;
+var switchTurnScreenX2 = -512;
+var switchTurnTimer = 0;
 var transitionOut = false;
 function renderSwitchTurn() {
+    switchTurnTimer += deltaTime;
+
     ctx.beginPath();
     // ctx.fillStyle = "#552288ff";
     // ctx.fillRect(switchTurnScreenX * scale, 0, 512 * scale, 512 * scale);
 
     ctx.fillStyle = "#552288ff";
-    ctx.fillRect((switchTurnScreenX - 32) * scale, 0 * scale, 544 * scale, 64 * scale);
-    ctx.fillRect((switchTurnScreenX - 32) * scale, 128 * scale, 544 * scale, 64 * scale);
-    ctx.fillRect((switchTurnScreenX - 32) * scale, 256 * scale, 544 * scale, 64 * scale);
-    ctx.fillRect((switchTurnScreenX - 32) * scale, 384 * scale, 544 * scale, 64 * scale);
+    ctx.fillRect(switchTurnScreenX1 * scale, 0 * scale, 512 * scale, 64 * scale);
+    ctx.fillRect(switchTurnScreenX1 * scale, 128 * scale, 512 * scale, 64 * scale);
+    ctx.fillRect(switchTurnScreenX1 * scale, 256 * scale, 512 * scale, 64 * scale);
+    ctx.fillRect(switchTurnScreenX1 * scale, 384 * scale, 512 * scale, 64 * scale);
     ctx.fillStyle = "#7744aaff";
     ctx.fillStyle = "#6633aaff";
-    ctx.fillRect(switchTurnScreenX * scale, 64 * scale, 544 * scale, 64 * scale);
-    ctx.fillRect(switchTurnScreenX * scale, 192 * scale, 544 * scale, 64 * scale);
-    ctx.fillRect(switchTurnScreenX * scale, 320 * scale, 544 * scale, 64 * scale);
-    ctx.fillRect(switchTurnScreenX * scale, 448 * scale, 544 * scale, 64 * scale);
+    ctx.fillRect(switchTurnScreenX2 * scale, 64 * scale, 512 * scale, 64 * scale);
+    ctx.fillRect(switchTurnScreenX2 * scale, 192 * scale, 512 * scale, 64 * scale);
+    ctx.fillRect(switchTurnScreenX2 * scale, 320 * scale, 512 * scale, 64 * scale);
+    ctx.fillRect(switchTurnScreenX2 * scale, 448 * scale, 512 * scale, 64 * scale);
 
     if (!transitionOut) {
         ctx.beginPath();
         ctx.fillStyle = "#ffffffff";
         ctx.font = String(50 * scale) + "px Arial";
-        ctx.fillText("Switching Turn", (85 + switchTurnScreenX) * scale, 80 * scale);
+        ctx.fillText("Switching Turn", (85 + switchTurnScreenX1) * scale, 80 * scale);
         if (turn == PIECECOLOR.WHITE) {
-            ctx.fillText("To Black", (150 + switchTurnScreenX) * scale, 160 * scale);
+            ctx.fillText("To Black", (150 + switchTurnScreenX1) * scale, 160 * scale);
         }
         if (turn == PIECECOLOR.BLACK) {
-            ctx.fillText("To White", (150 + switchTurnScreenX) * scale, 160 * scale);
+            ctx.fillText("To White", (150 + switchTurnScreenX1) * scale, 160 * scale);
         }
         ctx.font = String(30 * scale) + "px Arial";
-        ctx.fillText("Press Enter to Confirm", (95 + switchTurnScreenX) * scale, 320 * scale);
+        ctx.fillText("Press Enter to Confirm", (95 + switchTurnScreenX1) * scale, 320 * scale);
 
-        switchTurnScreenX += ((0 - switchTurnScreenX) / 20) * deltaTime;
+        if (turn == PIECECOLOR.WHITE) {
+            switchTurnScreenX1 += ((0 - switchTurnScreenX1) / 20) * deltaTime;
+            if (switchTurnTimer > 10) {
+                switchTurnScreenX2 += ((0 - switchTurnScreenX2) / 20) * deltaTime;
+            }
+        } else if (turn == PIECECOLOR.BLACK) {
+            switchTurnScreenX1 += ((0 - switchTurnScreenX1) / 20) * deltaTime;
+            if (switchTurnTimer > 10) {
+                switchTurnScreenX2 += ((0 - switchTurnScreenX2) / 20) * deltaTime;
+            }
+        }
     
         if (keys["Enter"]) {
             turn++;
@@ -1085,30 +1106,55 @@ function renderSwitchTurn() {
             hasDrawn = false;
 
             showProceedButton = false;
+            switchTurnTimer = 0;
         
             transitionOut = true;
         }
     } else {
-        if (544 - switchTurnScreenX < 5) {
-            switchTurnScreenX = 544;
-            transitionOut = false;
-            switchingTurn = false;
+        if (turn == PIECECOLOR.BLACK) {
+            if (512 - switchTurnScreenX1 < 5) {
+                switchTurnScreenX1 = 512;
+            }
+            if (512 - switchTurnScreenX2 < 5) {
+                switchTurnScreenX2 = 512;
+                transitionOut = false;
+                switchingTurn = false;
+            }
+        } else if (turn == PIECECOLOR.WHITE) {
+            if (-512 - switchTurnScreenX1 > -5) {
+                switchTurnScreenX1 = -512;
+            }
+            if (-512 - switchTurnScreenX2 > -5) {
+                switchTurnScreenX2 = -512;
+                transitionOut = false;
+                switchingTurn = false;
+            }
         }
 
         ctx.beginPath();
         ctx.fillStyle = "#ffffffff";
         ctx.font = String(50 * scale) + "px Arial";
-        ctx.fillText("Switching Turn", (85 + switchTurnScreenX) * scale, 80 * scale);
+        ctx.fillText("Switching Turn", (85 + switchTurnScreenX1) * scale, 80 * scale);
         if (turn == PIECECOLOR.WHITE) {
-            ctx.fillText("To White", (150 + switchTurnScreenX) * scale, 160 * scale);
+            ctx.fillText("To White", (150 + switchTurnScreenX1) * scale, 160 * scale);
         }
         if (turn == PIECECOLOR.BLACK) {
-            ctx.fillText("To Black", (150 + switchTurnScreenX) * scale, 160 * scale);
+            ctx.fillText("To Black", (150 + switchTurnScreenX1) * scale, 160 * scale);
         }
         ctx.font = String(30 * scale) + "px Arial";
-        ctx.fillText("Press Enter to Confirm", (95 + switchTurnScreenX) * scale, 320 * scale);
+        ctx.fillText("Press Enter to Confirm", (95 + switchTurnScreenX1) * scale, 320 * scale);
 
-        switchTurnScreenX += ((544 - switchTurnScreenX) / 20) * deltaTime;
+        if (turn == PIECECOLOR.BLACK) {
+            switchTurnScreenX1 += ((512 - switchTurnScreenX1) / 20) * deltaTime;
+            if (switchTurnTimer > 10) {
+                switchTurnScreenX2 += ((512 - switchTurnScreenX2) / 20) * deltaTime;
+            }
+        } else if (turn == PIECECOLOR.WHITE) {
+            switchTurnScreenX1 += ((-512 - switchTurnScreenX1) / 20) * deltaTime;
+            if (switchTurnTimer > 10) {
+                switchTurnScreenX2 += ((-512 - switchTurnScreenX2) / 20) * deltaTime;
+            }
+        }
     }
 }
 
