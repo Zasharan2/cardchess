@@ -1,3 +1,24 @@
+// Import the functions you need from the SDKs you need
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.2.0/firebase-app.js";
+import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.2.0/firebase-auth.js";
+import { getDatabase, ref, set, get, update, child, onDisconnect, onValue, onChildAdded, onChildRemoved } from "https://www.gstatic.com/firebasejs/11.2.0/firebase-database.js";
+
+// Your web app's Firebase configuration
+const firebaseConfig = {
+    apiKey: "AIzaSyAO1dx5N_mzjnZY8X0Yl7Qe0keXoQKnEbY",
+    authDomain: "cardchess-1a828.firebaseapp.com",
+    databaseURL: "https://cardchess-1a828-default-rtdb.firebaseio.com",
+    projectId: "cardchess-1a828",
+    storageBucket: "cardchess-1a828.firebasestorage.app",
+    messagingSenderId: "952584014885",
+    appId: "1:952584014885:web:9579fcd05c7340d20443cc"
+};
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const auth = getAuth();
+const database = getDatabase(app);
+
 var c = document.getElementById("gameCanvas");
 var ctx = c.getContext("2d");
 
@@ -7,6 +28,11 @@ var keys = [];
 
 document.addEventListener("keydown", function (event) {
     keys[event.key] = true;
+    if (gameScreen == GAMESCREEN.ROOM && onlineCode.length < 8) {
+        if (event.key.length == 1 && event.key.match(/[a-zA-Z0-9]/g)) {
+            onlineCode += event.key;
+        }
+    }
     // if (["ArrowUp", "ArrowDown", "ArrowRight", "ArrowLeft", " ", "Tab"].indexOf(event.key) > -1) {
     //     event.preventDefault();
     // }
@@ -53,6 +79,21 @@ c.style.height = displayHeight + 'px';
 c.width = displayWidth * scale;
 c.height = displayHeight * scale;
 
+const GAMESCREEN = {
+    NULL_TO_TITLE: 0.1,
+    TITLE: 1,
+    TITLE_TO_LOCAL: 1.2,
+    TITLE_TO_ROOM: 1.3,
+    LOCAL: 2,
+    ROOM: 3,
+    ROOM_TO_WAIT: 3.4,
+    WAIT: 4,
+    WAIT_TO_ONLINE: 4.5,
+    ONLINE: 5,
+}
+
+var gameScreen = GAMESCREEN.NULL_TO_TITLE;
+
 function renderBackground() {
     ctx.fillStyle = "#220044ff";
     ctx.fillRect(0, 0, 512 * scale, 512 * scale);
@@ -94,17 +135,28 @@ var hasDrawn = false;
 
 var showProceedButton = false;
 
+var oGameMove;
+
 function switchTurn() {
-    if (turn == PIECECOLOR.WHITE) {
-        switchTurnScreenX1 = -512;
-        switchTurnScreenX2 = -512;
-    } else if (turn == PIECECOLOR.BLACK) {
-        switchTurnScreenX1 = 512;
-        switchTurnScreenX2 = 512;
+    if (!onlineMode) {
+        if (turn == PIECECOLOR.WHITE) {
+            switchTurnScreenX1 = -512;
+            switchTurnScreenX2 = -512;
+        } else if (turn == PIECECOLOR.BLACK) {
+            switchTurnScreenX1 = 512;
+            switchTurnScreenX2 = 512;
+        }
+        transitionOut = false;
+        switchTurnTimer = 0;
+        switchingTurn = true;
+    } else {
+        update(oGameRef, {
+            move: oGameMove
+        });
+        turn++; turn %= 2;
+        showProceedButton = false;
+        hasDrawn = false;
     }
-    transitionOut = false;
-    switchTurnTimer = 0;
-    switchingTurn = true;
 }
 
 var highlightedPieceList = [];
@@ -787,7 +839,7 @@ function renderDrawPile() {
 
     if ((turn == PIECECOLOR.WHITE && whiteCardList.length > 15) || (turn == PIECECOLOR.BLACK && blackCardList.length > 15)) { hasDrawn = true; }
 
-    if (!showProceedButton && !switchingTurn && !drawingCard && !hasDrawn && mouseX > 375 * scale && mouseX < 475 * scale && mouseY > 99 * scale && mouseY < 259 * scale) {
+    if ((!onlineMode || (onlineMode && oSelfCol == turn)) && !showProceedButton && !switchingTurn && !drawingCard && !hasDrawn && mouseX > 375 * scale && mouseX < 475 * scale && mouseY > 99 * scale && mouseY < 259 * scale) {
         if (mouseDown) {
             drawingCard = true;
             drawCardTimer = 0;
@@ -857,6 +909,12 @@ function renderPlaceCard() {
                     pieceArray[mouseBoardY][mouseBoardX] = null;
                     placePiece.render();
                     if (mouseDown) {
+                        // move to info (x, y, type, col, passantable)
+                        if (placePiece.type == PIECETYPE.PAWN) {
+                            oGameMove = String(mouseBoardX)+","+String(mouseBoardY)+","+String(placePiece.type)+","+String(placePiece.col)+","+String(placePiece.canPassant);
+                        } else {
+                            oGameMove = String(mouseBoardX)+","+String(mouseBoardY)+","+String(placePiece.type)+","+String(placePiece.col)+",false";
+                        }
                         pieceArray[mouseBoardY][mouseBoardX] = placePiece;
                         placePiece = null;
                         placeCard = null;
@@ -920,11 +978,11 @@ function cardCannotEscapeCheck(type, col) {
 }
 
 function renderDeck() {
-    if (turn == PIECECOLOR.WHITE) {
+    if ((!onlineMode && turn == PIECECOLOR.WHITE) || (onlineMode && oSelfCol == PIECECOLOR.WHITE)) {
         for (var i = 0; i < whiteCardList.length; i++) {
             // raise on hover
             if (i == whiteCardList.length - 1) {
-                if (!cardCannotEscapeCheck(whiteCardList[i].type, PIECECOLOR.WHITE) && !showProceedButton && !switchingTurn && !promoteMode && !drawingCard && !placingCard && hasDrawn && (mouseX / scale) > (whiteCardList[i].unscaledPos.x - 50) && (mouseX / scale) < (whiteCardList[i].unscaledPos.x + 50) && (mouseY / scale) > 400) {
+                if (turn == PIECECOLOR.WHITE && !cardCannotEscapeCheck(whiteCardList[i].type, PIECECOLOR.WHITE) && !showProceedButton && !switchingTurn && !promoteMode && !drawingCard && !placingCard && hasDrawn && (mouseX / scale) > (whiteCardList[i].unscaledPos.x - 50) && (mouseX / scale) < (whiteCardList[i].unscaledPos.x + 50) && (mouseY / scale) > 400) {
                     if (mouseDown) {
                         placingCard = true;
                         highlightedPieceList = [];
@@ -938,7 +996,7 @@ function renderDeck() {
                     whiteCardList[i].unscaledPos.y += ((480 - whiteCardList[i].unscaledPos.y) / 15) * deltaTime;
                 }
             } else {
-                if (!cardCannotEscapeCheck(whiteCardList[i].type, PIECECOLOR.WHITE) && !showProceedButton && !switchingTurn && !promoteMode && !drawingCard && !placingCard && hasDrawn && (mouseX / scale) > (whiteCardList[i].unscaledPos.x - 50) && (mouseX / scale) < (whiteCardList[i + 1].unscaledPos.x - 50) && (mouseY / scale) > 400) {
+                if (turn == PIECECOLOR.WHITE && !cardCannotEscapeCheck(whiteCardList[i].type, PIECECOLOR.WHITE) && !showProceedButton && !switchingTurn && !promoteMode && !drawingCard && !placingCard && hasDrawn && (mouseX / scale) > (whiteCardList[i].unscaledPos.x - 50) && (mouseX / scale) < (whiteCardList[i + 1].unscaledPos.x - 50) && (mouseY / scale) > 400) {
                     if (mouseDown) {
                         placingCard = true;
                         highlightedPieceList = [];
@@ -960,11 +1018,11 @@ function renderDeck() {
             }
             whiteCardList[i].render(CARDSIDE.FRONT);
         }
-    } else if (turn == PIECECOLOR.BLACK) {
+    } else if ((!onlineMode && turn == PIECECOLOR.BLACK) || (onlineMode && oSelfCol == PIECECOLOR.BLACK)) {
         for (var i = 0; i < blackCardList.length; i++) {
             // raise on hover
             if (i == blackCardList.length - 1) {
-                if (!cardCannotEscapeCheck(blackCardList[i].type, PIECECOLOR.BLACK) && !showProceedButton && !switchingTurn && !promoteMode && !drawingCard && !placingCard && hasDrawn && (mouseX / scale) > (blackCardList[i].unscaledPos.x - 50) && (mouseX / scale) < (blackCardList[i].unscaledPos.x + 50) && (mouseY / scale) > 400) {
+                if (turn == PIECECOLOR.BLACK && !cardCannotEscapeCheck(blackCardList[i].type, PIECECOLOR.BLACK) && !showProceedButton && !switchingTurn && !promoteMode && !drawingCard && !placingCard && hasDrawn && (mouseX / scale) > (blackCardList[i].unscaledPos.x - 50) && (mouseX / scale) < (blackCardList[i].unscaledPos.x + 50) && (mouseY / scale) > 400) {
                     if (mouseDown) {
                         placingCard = true;
                         highlightedPieceList = [];
@@ -978,7 +1036,7 @@ function renderDeck() {
                     blackCardList[i].unscaledPos.y += ((480 - blackCardList[i].unscaledPos.y) / 15) * deltaTime;
                 }
             } else {
-                if (!cardCannotEscapeCheck(blackCardList[i].type, PIECECOLOR.BLACK) && !showProceedButton && !switchingTurn && !promoteMode && !drawingCard && !placingCard && hasDrawn && (mouseX / scale) > (blackCardList[i].unscaledPos.x - 50) && (mouseX / scale) < (blackCardList[i + 1].unscaledPos.x - 50) && (mouseY / scale) > 400) {
+                if (turn == PIECECOLOR.BLACK && !cardCannotEscapeCheck(blackCardList[i].type, PIECECOLOR.BLACK) && !showProceedButton && !switchingTurn && !promoteMode && !drawingCard && !placingCard && hasDrawn && (mouseX / scale) > (blackCardList[i].unscaledPos.x - 50) && (mouseX / scale) < (blackCardList[i + 1].unscaledPos.x - 50) && (mouseY / scale) > 400) {
                     if (mouseDown) {
                         placingCard = true;
                         highlightedPieceList = [];
@@ -1004,7 +1062,7 @@ function renderDeck() {
 }
 
 function renderBoardDeckOverlay() {
-    if (!hasDrawn) {
+    if (!hasDrawn || (onlineMode && turn != oSelfCol)) {
         ctx.beginPath();
         ctx.fillStyle = "#00000080";
         ctx.fillRect(0, 274 * scale, 512 * scale, 238 * scale);
@@ -1015,7 +1073,7 @@ function renderBoardDeckOverlay() {
 }
 
 function renderDrawPileOverlay() {
-    if (hasDrawn) {
+    if (hasDrawn || (onlineMode && turn != oSelfCol)) {
         ctx.beginPath();
         ctx.fillStyle = "#00000080";
         ctx.fillRect(360 * scale, 70 * scale, 132 * scale, 214 * scale);
@@ -1152,7 +1210,7 @@ function renderProceedButton() {
     if (mouseX > 373 * scale && mouseX < 493 * scale && mouseY > 294 * scale && mouseY < 344 * scale) {
         if (mouseDown) {
             ctx.fillStyle = "#ffffffff";
-            if (!switchingTurn) {
+            if ((!onlineMode && !switchingTurn) || (onlineMode && oSelfCol == turn)) {
                 switchTurn();
             }
         } else {
@@ -1217,6 +1275,22 @@ function updateHighlightedPieces() {
         if (mouseBoardX == highlightedPieceList[i].x && mouseBoardY == highlightedPieceList[i].y) {
             if (mouseDown) {
                 // move
+                if (onlineMode) {
+                    // move to info (x, y, type, col, passantable), previous info (x, y), (optional info (x, y))
+                    if (Object.hasOwn(highlightedPieceList[i], "z")) {
+                        if (selectedPiece.type == PIECETYPE.PAWN) {
+                            oGameMove = String(highlightedPieceList[i].x)+","+String(highlightedPieceList[i].y)+","+String(selectedPiece.type)+","+String(selectedPiece.col)+","+String(selectedPiece.canPassant)+","+String(selectedPiece.pos.x)+","+String(selectedPiece.pos.y)+","+String(highlightedPieceList[i].z)+","+String(highlightedPieceList[i].w);
+                        } else {
+                            oGameMove = String(highlightedPieceList[i].x)+","+String(highlightedPieceList[i].y)+","+String(selectedPiece.type)+","+String(selectedPiece.col)+",false,"+String(selectedPiece.pos.x)+","+String(selectedPiece.pos.y)+","+String(highlightedPieceList[i].z)+","+String(highlightedPieceList[i].w);
+                        }
+                    } else {
+                        if (selectedPiece.type == PIECETYPE.PAWN) {
+                            oGameMove = String(highlightedPieceList[i].x)+","+String(highlightedPieceList[i].y)+","+String(selectedPiece.type)+","+String(selectedPiece.col)+","+String(selectedPiece.canPassant)+","+String(selectedPiece.pos.x)+","+String(selectedPiece.pos.y);
+                        } else {
+                            oGameMove = String(highlightedPieceList[i].x)+","+String(highlightedPieceList[i].y)+","+String(selectedPiece.type)+","+String(selectedPiece.col)+",false,"+String(selectedPiece.pos.x)+","+String(selectedPiece.pos.y);
+                        }
+                    }
+                }
 
                 pieceArray[highlightedPieceList[i].y][highlightedPieceList[i].x] = selectedPiece;
                 pieceArray[selectedPiece.pos.y][selectedPiece.pos.x] = null;
@@ -1312,15 +1386,27 @@ function checkCheck(flipColors) {
 function promote() {
     if (keys["q"]) {
         selectedPiece.type = PIECETYPE.QUEEN;
+        oGameMove = oGameMove.split(",");
+        oGameMove[2] = String(PIECETYPE.QUEEN);
+        oGameMove.join(",");
     }
     if (keys["r"]) {
         selectedPiece.type = PIECETYPE.ROOK;
+        oGameMove = oGameMove.split(",");
+        oGameMove[2] = String(PIECETYPE.ROOK);
+        oGameMove.join(",");
     }
     if (keys["b"]) {
         selectedPiece.type = PIECETYPE.BISHOP;
+        oGameMove = oGameMove.split(",");
+        oGameMove[2] = String(PIECETYPE.BISHOP);
+        oGameMove.join(",");
     }
     if (keys["n"]) {
         selectedPiece.type = PIECETYPE.KNIGHT;
+        oGameMove = oGameMove.split(",");
+        oGameMove[2] = String(PIECETYPE.KNIGHT);
+        oGameMove.join(",");
     }
 
     if (keys["q"] || keys["r"] || keys["b"] || keys["n"]) {
@@ -1354,9 +1440,331 @@ function updateAll() {
     }
 }
 
+var onlineCode;
+var onlineMode = false;
+
 function main() {
-    updateAll();
-    renderAll();
+    switch(gameScreen) {
+        case GAMESCREEN.NULL_TO_TITLE: {
+            gameScreen = GAMESCREEN.TITLE;
+            break;
+        }
+        case GAMESCREEN.TITLE: {
+            // background
+            ctx.beginPath();
+            ctx.fillStyle = "#7744aaff";
+            ctx.fillRect(0, 0, 512 * scale, 512 * scale);
+
+            // stripes
+            ctx.beginPath();
+            ctx.fillStyle = "#6633aaff";
+            ctx.fillRect(0, 0 * scale, 512 * scale, 40 * scale);
+            ctx.fillRect(0, 80 * scale, 512 * scale, 40 * scale);
+            ctx.fillRect(0, 160 * scale, 512 * scale, 40 * scale);
+            ctx.fillRect(0, 240 * scale, 512 * scale, 40 * scale);
+            ctx.fillRect(0, 320 * scale, 512 * scale, 40 * scale);
+            ctx.fillRect(0, 400 * scale, 512 * scale, 40 * scale);
+            ctx.fillRect(0, 480 * scale, 512 * scale, 40 * scale);
+
+            // title
+            ctx.beginPath();
+            ctx.fillStyle = "#ffffffff";
+            ctx.font = String(80 * scale) + "px Georgia";
+            ctx.fillText("CardChess", 60 * scale, 120 * scale);
+
+            // local button
+            ctx.beginPath();
+            if (mouseX > 180 * scale && mouseX < 340 * scale && mouseY > 200 * scale && mouseY < 260 * scale) {
+                ctx.fillStyle = "#551199ff";
+                if (mouseDown) {
+                    ctx.fillStyle = "#ffffffff";
+                    gameScreen = GAMESCREEN.TITLE_TO_LOCAL;
+                }
+            } else {
+                ctx.fillStyle = "#441188ff";
+            }
+            ctx.roundRect(170 * scale, 190 * scale, 160 * scale, 60 * scale, 10 * scale);
+            ctx.fill();
+            ctx.fillStyle = "#ffffffff";
+            ctx.font = String(30 * scale) + "px Georgia";
+            ctx.fillText("LOCAL", 200 * scale, 230 * scale);
+
+            // online button
+            ctx.beginPath();
+            if (mouseX > 180 * scale && mouseX < 340 * scale && mouseY > 280 * scale && mouseY < 340 * scale) {
+                ctx.fillStyle = "#551199ff";
+                if (mouseDown) {
+                    ctx.fillStyle = "#ffffffff";
+                    gameScreen = GAMESCREEN.TITLE_TO_ROOM;
+                }
+            } else {
+                ctx.fillStyle = "#441188ff";
+            }
+            ctx.roundRect(170 * scale, 270 * scale, 160 * scale, 60 * scale, 10 * scale);
+            ctx.fill();
+            ctx.fillStyle = "#ffffffff";
+            ctx.font = String(30 * scale) + "px Georgia";
+            ctx.fillText("ONLINE", 190 * scale, 310 * scale);
+
+            break;
+        }
+        case GAMESCREEN.TITLE_TO_LOCAL: {
+            turn = PIECECOLOR.WHITE;
+            gameScreen = GAMESCREEN.LOCAL;
+            break;
+        }
+        case GAMESCREEN.LOCAL: {
+            updateAll();
+            renderAll();
+            break;
+        }
+        case GAMESCREEN.TITLE_TO_ROOM: {
+            onlineCode = "";
+            gameScreen = GAMESCREEN.ROOM;
+            break;
+        }
+        case GAMESCREEN.ROOM: {
+            // background
+            ctx.beginPath();
+            ctx.fillStyle = "#7744aaff";
+            ctx.fillRect(0, 0, 512 * scale, 512 * scale);
+
+            // stripes
+            ctx.beginPath();
+            ctx.fillStyle = "#6633aaff";
+            ctx.fillRect(0, 0 * scale, 512 * scale, 40 * scale);
+            ctx.fillRect(0, 80 * scale, 512 * scale, 40 * scale);
+            ctx.fillRect(0, 160 * scale, 512 * scale, 40 * scale);
+            ctx.fillRect(0, 240 * scale, 512 * scale, 40 * scale);
+            ctx.fillRect(0, 320 * scale, 512 * scale, 40 * scale);
+            ctx.fillRect(0, 400 * scale, 512 * scale, 40 * scale);
+            ctx.fillRect(0, 480 * scale, 512 * scale, 40 * scale);
+
+            // title
+            ctx.beginPath();
+            ctx.fillStyle = "#ffffffff";
+            ctx.font = String(50 * scale) + "px Georgia";
+            ctx.fillText("Create or Join Room", 30 * scale, 100 * scale);
+
+            // text input background
+            ctx.beginPath();
+            ctx.fillStyle = "#441188ff";
+            ctx.roundRect(140 * scale, 190 * scale, 220 * scale, 60 * scale, 10 * scale);
+            ctx.fill();
+            ctx.fillStyle = "#ffffffff";
+            ctx.font = String(30 * scale) + "px Georgia";
+            ctx.fillText(onlineCode, 160 * scale, 230 * scale);
+
+            if (onlineCode.length >= 8) {
+                gameScreen = GAMESCREEN.ROOM_TO_WAIT;
+            }
+
+            break;
+        }
+        case GAMESCREEN.ROOM_TO_WAIT: {
+            get(child(ref(database), `games/${onlineCode}`)).then((snapshot) => {
+                if (snapshot.exists()) {
+                    joinOnline();
+                } else {
+                    createOnline();
+                }
+                gameScreen = GAMESCREEN.WAIT;
+            }).catch((error) => {
+                console.error(error);
+            });
+            break;
+        }
+        case GAMESCREEN.WAIT: {
+            // background
+            ctx.beginPath();
+            ctx.fillStyle = "#7744aaff";
+            ctx.fillRect(0, 0, 512 * scale, 512 * scale);
+
+            // stripes
+            ctx.beginPath();
+            ctx.fillStyle = "#6633aaff";
+            ctx.fillRect(0, 0 * scale, 512 * scale, 40 * scale);
+            ctx.fillRect(0, 80 * scale, 512 * scale, 40 * scale);
+            ctx.fillRect(0, 160 * scale, 512 * scale, 40 * scale);
+            ctx.fillRect(0, 240 * scale, 512 * scale, 40 * scale);
+            ctx.fillRect(0, 320 * scale, 512 * scale, 40 * scale);
+            ctx.fillRect(0, 400 * scale, 512 * scale, 40 * scale);
+            ctx.fillRect(0, 480 * scale, 512 * scale, 40 * scale);
+
+            // title
+            ctx.beginPath();
+            ctx.fillStyle = "#ffffffff";
+            ctx.font = String(50 * scale) + "px Georgia";
+            ctx.fillText("Awaiting Connection...", 5 * scale, 100 * scale);
+
+            // text input background
+            ctx.beginPath();
+            ctx.fillStyle = "#441188ff";
+            ctx.roundRect(140 * scale, 190 * scale, 220 * scale, 60 * scale, 10 * scale);
+            ctx.fill();
+            ctx.fillStyle = "#ffffffff";
+            ctx.font = String(30 * scale) + "px Georgia";
+            ctx.fillText(onlineCode, 160 * scale, 230 * scale);
+            break;
+        }
+        case GAMESCREEN.WAIT_TO_ONLINE: {
+            console.log(oSelfCol);
+            onlineMode = true;
+            turn = PIECECOLOR.WHITE;
+            gameScreen = GAMESCREEN.ONLINE;
+            break;
+        }
+        case GAMESCREEN.ONLINE: {
+            updateAll();
+            renderAll();
+            break;
+        }
+    }
+}
+
+var oSelfID;
+var oGameRef;
+
+var oSelfCol;
+
+var oGameMove;
+var pOGameMove;
+
+function joinOnline() {
+    onAuthStateChanged(auth, (user) => {
+        if (user) {
+            // logged in
+
+            oSelfID = user.uid;
+
+            oGameRef = ref(database, `games/${onlineCode}`);
+
+            update(oGameRef, {
+                p2: oSelfID
+            });
+
+            onValue(oGameRef, (snapshot) => {
+                pOGameMove = oGameMove;
+                oGameMove = snapshot.val().move;
+                if (pOGameMove != oGameMove) {
+                    onlineMove();
+                }
+                // console.log(oGameMove);
+            });
+
+            onChildAdded(oGameRef, (snapshot) => {
+                if (snapshot.val() == oSelfID) {
+                //     get(child(ref(database), `games/${onlineCode}/initialTypeBoard`)).then((snapshot2) => {
+                //         get(child(ref(database), `games/${onlineCode}/initialColBoard`)).then((snapshot3) => {
+                //             if (snapshot2.exists()) {
+                //                 console.log(snapshot2.val());
+                //                 for (var lo = 0; lo < boardLength; lo++) {
+                //                     for (var mo = 0; mo < boardLength; mo++) {
+                //                         for (var no = 0; no < boardLength; no++) {
+                //                             typeBoard[lo][mo][no] = (snapshot2.val()[(lo * boardLength * boardLength) + (mo * boardLength) + no] - 1);
+                //                             colourBoard[lo][mo][no] = (snapshot3.val()[(lo * boardLength * boardLength) + (mo * boardLength) + no] - 1);
+                //                         }
+                //                     }
+                //                 }
+                //                 console.log(typeBoard);
+                                oSelfCol = PIECECOLOR.BLACK;
+                                gameScreen = GAMESCREEN.WAIT_TO_ONLINE;
+                //             }
+                //         });
+                //     });
+                }
+            });
+
+            onChildRemoved(oGameRef, (snapshot) => {
+                // something like below:
+                // oGameMove = "disconnect"
+            });
+        } else {
+            // not logged in
+        }
+    });
+
+    signInAnonymously(auth).catch((error) => {
+        const errorCode = error.code;
+        const errorMessage = error.message;
+
+        console.log(errorCode, errorMessage);
+    });
+}
+
+function createOnline() {
+    onAuthStateChanged(auth, (user) => {
+        if (user) {
+            // logged in
+
+            oSelfID = user.uid;
+
+            oGameRef = ref(database, `games/${onlineCode}`);
+
+            set(oGameRef, {
+                move: "",
+                // initialTypeBoard: oBoardTypeString,
+                // initialColBoard: oBoardColString,
+                p1: oSelfID
+            });
+
+            onDisconnect(oGameRef).remove();
+
+            onValue(oGameRef, (snapshot) => {
+                pOGameMove = oGameMove;
+                oGameMove = snapshot.val().move;
+                if (pOGameMove != oGameMove) {
+                    onlineMove();
+                }
+                // console.log(oGameMove);
+            });
+
+            onChildAdded(oGameRef, (snapshot) => {
+                // p2
+                if (snapshot.val() != "" && snapshot.val() != oSelfID) {
+                    oSelfCol = PIECECOLOR.WHITE;
+                    gameScreen = GAMESCREEN.WAIT_TO_ONLINE;
+                }
+            });
+
+            onChildRemoved(oGameRef, (snapshot) => {
+                // something like below:
+                // oGameMove = "disconnect"
+            });
+        } else {
+            // not logged in
+        }
+    });
+
+    signInAnonymously(auth).catch((error) => {
+        const errorCode = error.code;
+        const errorMessage = error.message;
+
+        console.log(errorCode, errorMessage);
+    });
+}
+
+function onlineMove() {
+    // move to info (x, y, type, col, passantable), previous info (x, y), (optional info (x, y))
+    oGameMove = oGameMove.split(",");
+    
+    pieceArray[Number(oGameMove[1])][Number(oGameMove[0])] = new Piece(new Vector2(Number(oGameMove[0]), Number(oGameMove[1])), Number(oGameMove[2]), Number(oGameMove[3]));
+    pieceArray[Number(oGameMove[1])][Number(oGameMove[0])].canPassant = Boolean(oGameMove[4]);
+
+    // piece moved (won't trigger if piece placed)
+    if (oGameMove.length > 5) {
+        pieceArray[Number(oGameMove[6])][Number(oGameMove[5])] = null;
+        // fill card lists so that both clients report number of cards of opponent accurately
+        if (oSelfCol == PIECECOLOR.WHITE) { blackCardList.push("card count filler"); }
+        if (oSelfCol == PIECECOLOR.BLACK) { whiteCardList.push("card count filler"); }
+    }
+
+    // en passant capture
+    if (oGameMove.length > 7) {
+        pieceArray[Number(oGameMove[8])][Number(oGameMove[7])] = null;
+    }
+
+    turn++; turn %= 2;
 }
 
 var deltaTime = 0;
@@ -1371,8 +1779,7 @@ function loop() {
 }
 
 function init() {
-    // initPieces();
-    turn = PIECECOLOR.WHITE;
+    gameScreen = GAMESCREEN.NULL_TO_TITLE;
     window.requestAnimationFrame(loop)
 }
 window.requestAnimationFrame(init);
