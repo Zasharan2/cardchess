@@ -837,7 +837,7 @@ function renderDrawPile() {
     backgroundCard.render(CARDSIDE.BACK);
     hoverCard.render(CARDSIDE.BACK);
 
-    if ((turn == PIECECOLOR.WHITE && whiteCardList.length > 15) || (turn == PIECECOLOR.BLACK && blackCardList.length > 15)) { hasDrawn = true; }
+    if ((((!onlineMode && turn == PIECECOLOR.WHITE) || (onlineMode && oSelfCol == turn && turn == PIECECOLOR.WHITE)) && whiteCardList.length > 15) || (((!onlineMode && turn == PIECECOLOR.BLACK) || (onlineMode && oSelfCol == turn && turn == PIECECOLOR.BLACK)) && blackCardList.length > 15)) { hasDrawn = true; }
 
     if ((!onlineMode || (onlineMode && oSelfCol == turn)) && !showProceedButton && !switchingTurn && !drawingCard && !hasDrawn && mouseX > 375 * scale && mouseX < 475 * scale && mouseY > 99 * scale && mouseY < 259 * scale) {
         if (mouseDown) {
@@ -1388,25 +1388,25 @@ function promote() {
         selectedPiece.type = PIECETYPE.QUEEN;
         oGameMove = oGameMove.split(",");
         oGameMove[2] = String(PIECETYPE.QUEEN);
-        oGameMove.join(",");
+        oGameMove = oGameMove.join(",");
     }
     if (keys["r"]) {
         selectedPiece.type = PIECETYPE.ROOK;
         oGameMove = oGameMove.split(",");
         oGameMove[2] = String(PIECETYPE.ROOK);
-        oGameMove.join(",");
+        oGameMove = oGameMove.join(",");
     }
     if (keys["b"]) {
         selectedPiece.type = PIECETYPE.BISHOP;
         oGameMove = oGameMove.split(",");
         oGameMove[2] = String(PIECETYPE.BISHOP);
-        oGameMove.join(",");
+        oGameMove = oGameMove.join(",");
     }
     if (keys["n"]) {
         selectedPiece.type = PIECETYPE.KNIGHT;
         oGameMove = oGameMove.split(",");
         oGameMove[2] = String(PIECETYPE.KNIGHT);
-        oGameMove.join(",");
+        oGameMove = oGameMove.join(",");
     }
 
     if (keys["q"] || keys["r"] || keys["b"] || keys["n"]) {
@@ -1755,8 +1755,11 @@ function onlineMove() {
     if (oGameMove.length > 5) {
         pieceArray[Number(oGameMove[6])][Number(oGameMove[5])] = null;
         // fill card lists so that both clients report number of cards of opponent accurately
-        if (oSelfCol == PIECECOLOR.WHITE) { blackCardList.push("card count filler"); }
-        if (oSelfCol == PIECECOLOR.BLACK) { whiteCardList.push("card count filler"); }
+        if (oSelfCol == PIECECOLOR.WHITE && blackCardList.length < 16) { blackCardList.push("card count filler"); }
+        if (oSelfCol == PIECECOLOR.BLACK && whiteCardList.length < 16) { whiteCardList.push("card count filler"); }
+    } else {
+        if (oSelfCol == PIECECOLOR.WHITE && blackCardList.length == 16) { blackCardList.pop(); }
+        if (oSelfCol == PIECECOLOR.BLACK && whiteCardList.length == 16) { whiteCardList.pop(); }
     }
 
     // en passant capture
