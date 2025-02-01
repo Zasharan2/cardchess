@@ -14,10 +14,9 @@ const firebaseConfig = {
     appId: "1:952584014885:web:9579fcd05c7340d20443cc"
 };
 
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
-const auth = getAuth();
-const database = getDatabase(app);
+var app;
+var auth;
+var database;
 
 var c = document.getElementById("gameCanvas");
 var ctx = c.getContext("2d");
@@ -1562,6 +1561,11 @@ function main() {
             break;
         }
         case GAMESCREEN.ROOM_TO_WAIT: {
+            // Initialize Firebase
+            app = initializeApp(firebaseConfig);
+            auth = getAuth();
+            database = getDatabase(app);
+
             get(child(ref(database), `games/${onlineCode}`)).then((snapshot) => {
                 if (snapshot.exists()) {
                     joinOnline();
