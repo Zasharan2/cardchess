@@ -10,3 +10,10 @@ canvas {
     border-radius: 2em;
     border-width: 0.5em;
 }
+
+p {
+    margin-left: auto;
+    margin-right: auto;
+    text-align: center;
+    width: 40em;
+}
