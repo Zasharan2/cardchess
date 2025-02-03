@@ -62,6 +62,10 @@ var mouseDown, mouseButton;
 window.addEventListener("mousedown", function(event) {
     mouseDown = true;
     mouseButton = event.buttons;
+
+    if (gameScreen == GAMESCREEN.SETTINGS && mouseX > 180 * scale && mouseX < 340 * scale && mouseY > 200 * scale && mouseY < 260 * scale) {
+        playMode++; playMode %= Object.keys(PLAYMODE).length;
+    }
 });
 
 window.addEventListener("mouseup", function(event) {
@@ -83,12 +87,15 @@ const GAMESCREEN = {
     TITLE: 1,
     TITLE_TO_LOCAL: 1.2,
     TITLE_TO_ROOM: 1.3,
+    TITLE_TO_SETTINGS: 1.6,
     LOCAL: 2,
     ROOM: 3,
     ROOM_TO_WAIT: 3.4,
     WAIT: 4,
     WAIT_TO_ONLINE: 4.5,
     ONLINE: 5,
+    SETTINGS: 6,
+    SETTINGS_TO_TITLE: 6.1,
 }
 
 var gameScreen = GAMESCREEN.NULL_TO_TITLE;
@@ -119,7 +126,9 @@ const PIECETYPE = {
     BISHOP: 2,
     KNIGHT: 3,
     ROOK: 4,
-    PAWN: 5
+    PAWN: 5,
+
+    CANNON: 6,
 };
 
 const PIECECOLOR = {
@@ -577,6 +586,86 @@ class Piece {
                 }
                 break;
             }
+            case PIECETYPE.CANNON: {
+                // left
+                var reach;
+                for (var i = 1; i < 8; i++) {
+                    reach = i;
+                    if (this.pos.x + i <= 7 && pieceArray[this.pos.y][this.pos.x + i] == null) {
+                        selectedList.push(new Vector2(this.pos.x + i, this.pos.y));
+                    } else {
+                        break;
+                    }
+                }
+                // left capture
+                for (var i = reach + 1; i < 8; i++) {
+                    if (this.pos.x + i <= 7 && pieceArray[this.pos.y][this.pos.x + i] != null && pieceArray[this.pos.y][this.pos.x + i].col != this.col) {
+                        selectedList.push(new Vector2(this.pos.x + i, this.pos.y));
+                        break;
+                    }
+                    if (this.pos.x + i <= 7 && pieceArray[this.pos.y][this.pos.x + i] != null && pieceArray[this.pos.y][this.pos.x + i].col == this.col) {
+                        break;
+                    }
+                }
+                // right
+                for (var i = 1; i < 8; i++) {
+                    reach = i;
+                    if (this.pos.x - i >= 0 && pieceArray[this.pos.y][this.pos.x - i] == null) {
+                        selectedList.push(new Vector2(this.pos.x - i, this.pos.y));
+                    } else {
+                        break;
+                    }
+                }
+                // right capture
+                for (var i = reach + 1; i < 8; i++) {
+                    if (this.pos.x - i >= 0 && pieceArray[this.pos.y][this.pos.x - i] != null && pieceArray[this.pos.y][this.pos.x - i].col != this.col) {
+                        selectedList.push(new Vector2(this.pos.x - i, this.pos.y));
+                        break;
+                    }
+                    if (this.pos.x - i >= 0 && pieceArray[this.pos.y][this.pos.x - i] != null && pieceArray[this.pos.y][this.pos.x - i].col == this.col) {
+                        break;
+                    }
+                }
+                // down
+                for (var i = 1; i < 8; i++) {
+                    reach = i;
+                    if (this.pos.y + i <= 7 && pieceArray[this.pos.y + i][this.pos.x] == null) {
+                        selectedList.push(new Vector2(this.pos.x, this.pos.y + i));
+                    } else {
+                        break;
+                    }
+                }
+                // down capture
+                for (var i = reach + 1; i < 8; i++) {
+                    if (this.pos.y + i <= 7 && pieceArray[this.pos.y + i][this.pos.x] != null && pieceArray[this.pos.y + i][this.pos.x].col != this.col) {
+                        selectedList.push(new Vector2(this.pos.x, this.pos.y + i));
+                        break;
+                    }
+                    if (this.pos.y + i <= 7 && pieceArray[this.pos.y + i][this.pos.x] != null && pieceArray[this.pos.y + i][this.pos.x].col == this.col) {
+                        break;
+                    }
+                }
+                // up
+                for (var i = 1; i < 8; i++) {
+                    reach = i;
+                    if (this.pos.y - i >= 0 && pieceArray[this.pos.y - i][this.pos.x] == null) {
+                        selectedList.push(new Vector2(this.pos.x, this.pos.y - i));
+                    } else {
+                        break;
+                    }
+                }
+                // up capture
+                for (var i = reach + 1; i < 8; i++) {
+                    if (this.pos.y - i >= 0 && pieceArray[this.pos.y - i][this.pos.x] != null && pieceArray[this.pos.y - i][this.pos.x].col != this.col) {
+                        selectedList.push(new Vector2(this.pos.x, this.pos.y - i));
+                        break;
+                    }
+                    if (this.pos.y - i >= 0 && pieceArray[this.pos.y - i][this.pos.x] != null && pieceArray[this.pos.y - i][this.pos.x].col == this.col) {
+                        break;
+                    }
+                }
+                break;
+            }
         }
         return selectedList;
     }
@@ -699,14 +788,14 @@ class Card {
         if (side == CARDSIDE.FRONT) {
             // checkers
             ctx.beginPath();
-            ctx.fillStyle = "#eeccffff";
+            ctx.fillStyle = (this.type == PIECETYPE.CANNON) ? "#cceeffff" : "#eeccffff";
             for (var i = 0; i < 7; i++) {
                 for (var j = 0; j < 12; j++) {
                     if ((i + j) % 2 == 0) {
-                        ctx.fillStyle = "#eeccffff";
+                        ctx.fillStyle = (this.type == PIECETYPE.CANNON) ? "#cceeffff" : "#eeccffff";
                         ctx.fillRect((this.pos.x - 46 + ((92/7) * i)) * this.size * scale, (this.pos.y - 76 + ((92/7) * j)) * this.size * scale, this.size * (92/7) * scale, this.size * (92/7) * scale);
                     } else {
-                        ctx.fillStyle = "#ccaaffff";
+                        ctx.fillStyle = (this.type == PIECETYPE.CANNON) ? "#aaccffff" : "#ccaaffff";
                         ctx.fillRect((this.pos.x - 46 + ((92/7) * i)) * this.size * scale, (this.pos.y - 76 + ((92/7) * j)) * this.size * scale, this.size * (92/7) * scale, this.size * (92/7) * scale);
                     }
                 }
@@ -714,7 +803,7 @@ class Card {
 
             // border
             ctx.beginPath();
-            ctx.strokeStyle = "#552288ff";
+            ctx.strokeStyle = (this.type == PIECETYPE.CANNON) ? "#225588ff" : "#552288ff";
             ctx.lineWidth = this.size * 8 * scale;
             ctx.roundRect((this.pos.x - 50) * this.size * scale, (this.pos.y - 80) * this.size * scale, this.size * 100 * scale, this.size * 160 * scale, this.size * 10 * scale);
             ctx.stroke();
@@ -724,7 +813,7 @@ class Card {
 
             // text
             ctx.beginPath();
-            ctx.fillStyle = "#552288ff";
+            ctx.fillStyle = (this.type == PIECETYPE.CANNON) ? "#225588ff" : "#552288ff";
             ctx.font = (String)(30 * this.size * scale) + "px Brush Script MT";
             switch(this.type) {
                 case PIECETYPE.PAWN: {
@@ -749,6 +838,11 @@ class Card {
                 }
                 case PIECETYPE.KING: {
                     ctx.fillText("King", (this.pos.x - 1 - (ctx.measureText("King").width / (2 * this.size * scale))) * this.size * scale, (this.pos.y - 35) * this.size * scale);
+                    break
+                }
+
+                case PIECETYPE.CANNON: {
+                    ctx.fillText("Cannon", (this.pos.x - 1 - (ctx.measureText("Cannon").width / (2 * this.size * scale))) * this.size * scale, (this.pos.y - 35) * this.size * scale);
                     break
                 }
             }
@@ -809,16 +903,32 @@ var switchingTurn = false;
 
 function randomCard() {
     var c = Math.random();
-    if (c < (8 / 15)) {
-        return PIECETYPE.PAWN;
-    } else if (c < (10 / 15)) {
-        return PIECETYPE.ROOK;
-    } else if (c < (12 / 15)) {
-        return PIECETYPE.BISHOP;
-    } else if (c < (14 / 15)) {
-        return PIECETYPE.KNIGHT;
-    } else {
-        return PIECETYPE.QUEEN;
+    if (playMode == PLAYMODE.NORMAL) {
+        if (c < (8 / 15)) {
+            return PIECETYPE.PAWN;
+        } else if (c < (10 / 15)) {
+            return PIECETYPE.ROOK;
+        } else if (c < (12 / 15)) {
+            return PIECETYPE.BISHOP;
+        } else if (c < (14 / 15)) {
+            return PIECETYPE.KNIGHT;
+        } else {
+            return PIECETYPE.QUEEN;
+        }
+    } else if (playMode == PLAYMODE.FUNKY) {
+        if (c < (8 / 17)) {
+            return PIECETYPE.PAWN;
+        } else if (c < (10 / 17)) {
+            return PIECETYPE.ROOK;
+        } else if (c < (12 / 17)) {
+            return PIECETYPE.BISHOP;
+        } else if (c < (14 / 17)) {
+            return PIECETYPE.KNIGHT;
+        } else if (c < (16 / 17)) {
+            return PIECETYPE.CANNON;
+        } else {
+            return PIECETYPE.QUEEN;
+        }
     }
 }
 
@@ -1083,20 +1193,17 @@ function renderOpponentCardCount() {
     ctx.beginPath();
     ctx.fillStyle = "#ffffffff";
     ctx.font = String(15 * scale) + "px Arial";
-    if (whiteCardList.length == 1) {
-        ctx.fillText("White has 1 card.", 360 * scale, 25 * scale);
-    } else {
-        ctx.fillText("White has " + String(whiteCardList.length) + " cards.", 360 * scale, 25 * scale);
-    }
-    if (blackCardList.length == 1) {
-        ctx.fillText("Black has 1 card.", 360 * scale, 45 * scale);
-    } else {
-        ctx.fillText("Black has " + String(blackCardList.length) + " cards.", 360 * scale, 45 * scale);
-    }
+    ctx.fillText("White: " + String(whiteCardList.length), 360 * scale, 25 * scale);
+    ctx.fillText("Black: " + String(blackCardList.length), 430 * scale, 25 * scale);
     if (turn == PIECECOLOR.WHITE) {
-        ctx.fillText("White to move.", 360 * scale, 65 * scale);
+        ctx.fillText("White to move.", 360 * scale, 45 * scale);
     } else if (turn == PIECECOLOR.BLACK) {
-        ctx.fillText("Black to move.", 360 * scale, 65 * scale);
+        ctx.fillText("Black to move.", 360 * scale, 45 * scale);
+    }
+    if (playMode == PLAYMODE.NORMAL) {
+        ctx.fillText("Play Mode: Normal", 360 * scale, 65 * scale);
+    } else if (playMode == PLAYMODE.FUNKY) {
+        ctx.fillText("Play Mode: Funky", 360 * scale, 65 * scale);
     }
 }
 
@@ -1442,6 +1549,13 @@ function updateAll() {
 var onlineCode;
 var onlineMode = false;
 
+const PLAYMODE = {
+    NORMAL: 0,
+    FUNKY: 1,
+};
+
+var playMode = PLAYMODE.NORMAL;
+
 function main() {
     switch(gameScreen) {
         case GAMESCREEN.NULL_TO_TITLE: {
@@ -1505,6 +1619,93 @@ function main() {
             ctx.font = String(30 * scale) + "px Georgia";
             ctx.fillText("ONLINE", 190 * scale, 310 * scale);
 
+            // settings button
+            ctx.beginPath();
+            if (mouseX > 180 * scale && mouseX < 340 * scale && mouseY > 360 * scale && mouseY < 420 * scale) {
+                ctx.fillStyle = "#551199ff";
+                if (mouseDown) {
+                    ctx.fillStyle = "#ffffffff";
+                    gameScreen = GAMESCREEN.TITLE_TO_SETTINGS;
+                }
+            } else {
+                ctx.fillStyle = "#441188ff";
+            }
+            ctx.roundRect(170 * scale, 350 * scale, 160 * scale, 60 * scale, 10 * scale);
+            ctx.fill();
+            ctx.fillStyle = "#ffffffff";
+            ctx.font = String(30 * scale) + "px Georgia";
+            ctx.fillText("SETTINGS", 176 * scale, 390 * scale);
+
+            break;
+        }
+        case GAMESCREEN.TITLE_TO_SETTINGS: {
+            gameScreen = GAMESCREEN.SETTINGS;
+            break;
+        }
+        case GAMESCREEN.SETTINGS: {
+            // background
+            ctx.beginPath();
+            ctx.fillStyle = "#7744aaff";
+            ctx.fillRect(0, 0, 512 * scale, 512 * scale);
+
+            // stripes
+            ctx.beginPath();
+            ctx.fillStyle = "#6633aaff";
+            ctx.fillRect(0, 0 * scale, 512 * scale, 40 * scale);
+            ctx.fillRect(0, 80 * scale, 512 * scale, 40 * scale);
+            ctx.fillRect(0, 160 * scale, 512 * scale, 40 * scale);
+            ctx.fillRect(0, 240 * scale, 512 * scale, 40 * scale);
+            ctx.fillRect(0, 320 * scale, 512 * scale, 40 * scale);
+            ctx.fillRect(0, 400 * scale, 512 * scale, 40 * scale);
+            ctx.fillRect(0, 480 * scale, 512 * scale, 40 * scale);
+
+            // title
+            ctx.beginPath();
+            ctx.fillStyle = "#ffffffff";
+            ctx.font = String(50 * scale) + "px Georgia";
+            ctx.fillText("Settings", 160 * scale, 100 * scale);
+
+            // mode button
+            ctx.beginPath();
+            if (mouseX > 180 * scale && mouseX < 340 * scale && mouseY > 200 * scale && mouseY < 260 * scale) {
+                ctx.fillStyle = "#551199ff";
+                if (mouseDown) {
+                    ctx.fillStyle = "#ffffffff";
+                    // gameScreen = GAMESCREEN.TITLE_TO_LOCAL;
+                }
+            } else {
+                ctx.fillStyle = "#441188ff";
+            }
+            ctx.roundRect(170 * scale, 190 * scale, 160 * scale, 60 * scale, 10 * scale);
+            ctx.fill();
+            ctx.fillStyle = "#ffffffff";
+            ctx.font = String(30 * scale) + "px Georgia";
+            if (playMode == PLAYMODE.NORMAL) {
+                ctx.fillText("NORMAL", 185 * scale, 230 * scale);
+            } else if (playMode == PLAYMODE.FUNKY) {
+                ctx.fillText("FUNKY", 200 * scale, 230 * scale);
+            }
+
+            // back button
+            ctx.beginPath();
+            if (mouseX > 30 * scale && mouseX < 190 * scale && mouseY > 440 * scale && mouseY < 500 * scale) {
+                ctx.fillStyle = "#551199ff";
+                if (mouseDown) {
+                    ctx.fillStyle = "#ffffffff";
+                    gameScreen = GAMESCREEN.SETTINGS_TO_TITLE;
+                }
+            } else {
+                ctx.fillStyle = "#441188ff";
+            }
+            ctx.roundRect(20 * scale, 430 * scale, 160 * scale, 60 * scale, 10 * scale);
+            ctx.fill();
+            ctx.fillStyle = "#ffffffff";
+            ctx.font = String(30 * scale) + "px Georgia";
+            ctx.fillText("BACK", 60 * scale, 470 * scale);
+            break;
+        }
+        case GAMESCREEN.SETTINGS_TO_TITLE: {
+            gameScreen = GAMESCREEN.TITLE;
             break;
         }
         case GAMESCREEN.TITLE_TO_LOCAL: {
@@ -1612,7 +1813,6 @@ function main() {
             break;
         }
         case GAMESCREEN.WAIT_TO_ONLINE: {
-            console.log(oSelfCol);
             onlineMode = true;
             turn = PIECECOLOR.WHITE;
             gameScreen = GAMESCREEN.ONLINE;
@@ -1642,6 +1842,12 @@ function joinOnline() {
             oSelfID = user.uid;
 
             oGameRef = ref(database, `games/${onlineCode}`);
+
+            get(child(oGameRef, `mode`)).then((snapshot) => {
+                playMode = snapshot.val();
+            }).catch((error) => {
+                console.error(error);
+            });
 
             update(oGameRef, {
                 p2: oSelfID
@@ -1707,6 +1913,7 @@ function createOnline() {
 
             set(oGameRef, {
                 move: "",
+                mode: playMode,
                 // initialTypeBoard: oBoardTypeString,
                 // initialColBoard: oBoardColString,
                 p1: oSelfID
@@ -1725,7 +1932,7 @@ function createOnline() {
 
             onChildAdded(oGameRef, (snapshot) => {
                 // p2
-                if (snapshot.val() != "" && snapshot.val() != oSelfID) {
+                if (snapshot.val() != "" && snapshot.val() != oSelfID && snapshot.val() != playMode) {
                     oSelfCol = PIECECOLOR.WHITE;
                     gameScreen = GAMESCREEN.WAIT_TO_ONLINE;
                 }
